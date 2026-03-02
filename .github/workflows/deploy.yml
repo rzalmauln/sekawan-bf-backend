@@ -85,7 +85,8 @@ jobs:
           username: deploy
           key: ${{ secrets.SSH_KEY }}
           script: |
-            cd /var/www/api.sekawan-bf
+            cd /srv/sekawan
+            export IMAGE_TAG=${{ github.sha }}
             docker compose pull
             docker compose up -d
             docker exec sekawan-api-app php artisan migrate --force
