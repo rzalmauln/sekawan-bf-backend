@@ -76,7 +76,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/sekawan-backend:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/sekawan-backend:${{ github.sha }}
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
