@@ -2,11 +2,14 @@
 
 namespace App\Services;
 
+use App\Events\OrderCreated;
+use App\Jobs\SendOrderWhatsappJob;
 use App\Repositories\CustomerRepository;
 use App\Repositories\ItemRepository;
 use App\Repositories\OrderItemRepository;
 use App\Repositories\OrderRepository;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class CheckoutService
@@ -20,58 +23,83 @@ class CheckoutService
 
     public function checkout(array $data, $paymentProof)
     {
-        return DB::transaction(function () use ($data, $paymentProof) {
+        $order = null;
 
-            // Upload file
-            $proofPath = $paymentProof->store('payment_proofs', 'public');
+        try {
 
-            // 1. Create customer
-            $customer = $this->customerRepo->create($data['customer']);
+            // 1️⃣ Jalankan transaksi TANPA file
+            $order = DB::transaction(function () use ($data) {
 
-            // 2. Create order
-            $order = $this->orderRepo->create([
-                'invoice_number' => $this->generateInvoice(),
-                'customer_id' => $customer->id,
-                'status' => 'pending',
-                'payment_proof_path' => $proofPath,
-                'total_price' => 0
-            ]);
+                $customer = $this->customerRepo->create($data['customer']);
 
-            $total = 0;
-
-            foreach ($data['items'] as $row) {
-
-                $item = $this->itemRepo->findForUpdate($row['item_id']);
-
-                if ($item->stock < $row['qty']) {
-                    throw new \Exception("Stock {$item->name} tidak cukup");
-                }
-
-                $this->itemRepo->decrementStock($item, $row['qty']);
-
-                $subtotal = $item->price * $row['qty'];
-
-                $this->orderItemRepo->create([
-                    'order_id' => $order->id,
-                    'item_id' => $item->id,
-                    'item_name' => $item->name,
-                    'unit_price' => $item->price,
-                    'qty' => $row['qty'],
-                    'subtotal' => $subtotal,
+                $order = $this->orderRepo->create([
+                    'invoice_number' => $this->generateInvoice(),
+                    'customer_id' => $customer->id,
+                    'status' => 'pending',
+                    'total_price' => 0,
+                    'payment_proof_path' => null
                 ]);
 
-                $total += $subtotal;
+                $total = 0;
+
+                foreach ($data['items'] as $row) {
+
+                    $item = $this->itemRepo->findForUpdate($row['item_id']);
+
+                    if ($item->stock < $row['qty']) {
+                        throw new \Exception("Stock {$item->name} tidak cukup");
+                    }
+
+                    $this->itemRepo->decrementStock($item, $row['qty']);
+
+                    $subtotal = $item->price * $row['qty'];
+
+                    $this->orderItemRepo->create([
+                        'order_id' => $order->id,
+                        'item_id' => $item->id,
+                        'item_name' => $item->name,
+                        'unit_price' => $item->price,
+                        'qty' => $row['qty'],
+                        'subtotal' => $subtotal,
+                    ]);
+
+                    $total += $subtotal;
+                }
+
+                $this->orderRepo->updateTotal($order, $total);
+
+                return $order;
+            });
+
+            // 2️⃣ Setelah commit → upload file
+            if ($paymentProof) {
+
+                $proofPath = $paymentProof->store(
+                    'payment_proofs',
+                    'public'
+                );
+
+                $order->update([
+                    'payment_proof_path' => $proofPath
+                ]);
             }
 
-            $this->orderRepo->updateTotal($order, $total);
+            SendOrderWhatsappJob::dispatch($order->id);
 
             return [
                 'message' => 'Order berhasil dibuat',
                 'invoice' => $order->invoice_number
             ];
-        });
-    }
+        } catch (\Throwable $e) {
 
+            // Jika file sudah terlanjur upload tapi update gagal
+            if (isset($proofPath) && Storage::disk('public')->exists($proofPath)) {
+                Storage::disk('public')->delete($proofPath);
+            }
+            throw new \Exception('Checkout gagal');
+        }
+    }
+    
     public function verify(int $orderId)
     {
         return DB::transaction(function () use ($orderId) {

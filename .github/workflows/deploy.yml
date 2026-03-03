@@ -76,7 +76,9 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/sekawan-backend:${{ github.sha }}
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/sekawan-backend:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/sekawan-backend:latest
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
@@ -87,7 +89,11 @@ jobs:
           script: |
             cd /srv/sekawan
             export IMAGE_TAG=${{ github.sha }}
-            docker compose pull
-            docker compose up -d
-            docker exec sekawan-api-app php artisan migrate --force
-            docker exec sekawan-api-app php artisan config:cache
+            docker compose pull backend
+            docker exec sekawan-backend php artisan down || true
+            docker compose up -d backend
+            docker exec sekawan-backend php artisan migrate --force
+            docker exec sekawan-backend php artisan config:cache
+            docker exec sekawan-backend php artisan route:cache
+            docker exec sekawan-backend php artisan up
+            docker image prune -f
