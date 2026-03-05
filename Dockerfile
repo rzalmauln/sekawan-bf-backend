@@ -24,7 +24,14 @@ RUN apk add --no-cache \
     unzip \
     icu-dev \
     freetype-dev \
-    libjpeg-turbo-dev
+    libjpeg-turbo-dev \
+    git \
+    autoconf \
+    gcc \
+    g++ \
+    make \
+    pkg-config \
+    libc-dev
 
 # Install PHP extensions
 RUN docker-php-ext-configure gd \
@@ -33,7 +40,6 @@ RUN docker-php-ext-configure gd \
 
 RUN docker-php-ext-install \
     pdo_mysql \
-
     mbstring \
     exif \
     pcntl \
@@ -43,6 +49,7 @@ RUN docker-php-ext-install \
 
 RUN pecl install redis \
     && docker-php-ext-enable redis
+    && apk del autoconf gcc g++ make pkgconfig
 
 # Set working directory
 WORKDIR /var/www
