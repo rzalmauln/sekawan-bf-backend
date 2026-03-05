@@ -9,7 +9,8 @@ RUN composer install \
     --no-dev \
     --no-interaction \
     --prefer-dist \
-    --optimize-autoloader
+    --optimize-autoloader \
+    --no-scripts
 
 # ---------- Stage 2: PHP Build ----------
 FROM php:8.3-fpm-alpine AS build
