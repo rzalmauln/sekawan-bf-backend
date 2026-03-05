@@ -82,7 +82,6 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/sekawan-backend:${{ github.sha }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/sekawan-backend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -95,11 +94,11 @@ jobs:
           script: |
             cd /srv/sekawan
             export IMAGE_TAG=${{ github.sha }}
-            docker compose pull
+            docker compose pull backend queue-worker
 
             docker exec sekawan-backend php artisan down || true
 
-            docker compose up -d backend queue-worker --force-recreate --pull always
+            docker compose up -d backend queue-worker --force-recreate
 
             docker exec sekawan-backend php artisan migrate --force
             docker exec sekawan-backend php artisan config:cache
@@ -107,5 +106,4 @@ jobs:
 
             docker exec sekawan-backend php artisan up
 
-            docker container prune -f
             docker image prune -af --filter "until=168h"
