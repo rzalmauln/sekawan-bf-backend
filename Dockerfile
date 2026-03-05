@@ -4,36 +4,29 @@ FROM composer:2 AS vendor
 WORKDIR /app
 
 COPY composer.json composer.lock ./
+
 RUN composer install \
     --no-dev \
-    --no-scripts \
     --no-interaction \
     --prefer-dist \
     --optimize-autoloader
 
-# ---------- Stage 2: PHP-FPM ----------
-FROM php:8.3-fpm-alpine
+# ---------- Stage 2: PHP Build ----------
+FROM php:8.3-fpm-alpine AS build
 
-# Install system dependencies
 RUN apk add --no-cache \
-    bash \
     libpng-dev \
     oniguruma-dev \
     libxml2-dev \
-    zip \
-    unzip \
     icu-dev \
     freetype-dev \
     libjpeg-turbo-dev \
-    git \
     autoconf \
     gcc \
     g++ \
     make \
-    pkgconfig \
-    libc-dev
+    pkgconfig
 
-# Install PHP extensions
 RUN docker-php-ext-configure gd \
     --with-freetype \
     --with-jpeg
@@ -48,22 +41,34 @@ RUN docker-php-ext-install \
     intl
 
 RUN pecl install redis \
-    && docker-php-ext-enable redis \
-    && apk del autoconf gcc g++ make pkgconfig
+    && docker-php-ext-enable redis
 
-# Set working directory
+# ---------- Stage 3: Runtime ----------
+FROM php:8.3-fpm-alpine
+
+RUN apk add --no-cache \
+    libpng \
+    oniguruma \
+    libxml2 \
+    icu \
+    freetype \
+    libjpeg-turbo \
+    bash
+
 WORKDIR /var/www
 
-# Copy application
+# copy php extensions dari stage build
+COPY --from=build /usr/local/lib/php/extensions /usr/local/lib/php/extensions
+COPY --from=build /usr/local/etc/php/conf.d /usr/local/etc/php/conf.d
+
+# copy application
 COPY . .
 
-# Copy vendor from stage 1
+# copy vendor
 COPY --from=vendor /app/vendor ./vendor
 
-# Set permissions
 RUN chown -R www-data:www-data /var/www \
-    && chmod -R 755 /var/www/storage \
-    && chmod -R 755 /var/www/bootstrap/cache
+    && chmod -R 755 storage bootstrap/cache
 
 USER www-data
 
