@@ -30,7 +30,7 @@ RUN apk add --no-cache \
     gcc \
     g++ \
     make \
-    pkg-config \
+    pkgconfig \
     libc-dev
 
 # Install PHP extensions
@@ -48,7 +48,7 @@ RUN docker-php-ext-install \
     intl
 
 RUN pecl install redis \
-    && docker-php-ext-enable redis
+    && docker-php-ext-enable redis \
     && apk del autoconf gcc g++ make pkgconfig
 
 # Set working directory
