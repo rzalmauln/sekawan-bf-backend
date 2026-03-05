@@ -2,13 +2,13 @@
 
 namespace App\Services;
 
-use App\Events\OrderCreated;
 use App\Jobs\SendOrderWhatsappJob;
 use App\Repositories\CustomerRepository;
 use App\Repositories\ItemRepository;
 use App\Repositories\OrderItemRepository;
 use App\Repositories\OrderRepository;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -85,7 +85,9 @@ class CheckoutService
             }
 
             SendOrderWhatsappJob::dispatch($order->id);
-
+            Log::info('Order created', [
+                'invoice' => $order->invoice_number
+            ]);
             return [
                 'message' => 'Order berhasil dibuat',
                 'invoice' => $order->invoice_number

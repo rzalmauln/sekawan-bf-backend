@@ -7,7 +7,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 
 class SendOrderWhatsappJob implements ShouldQueue
 {
@@ -32,7 +31,7 @@ class SendOrderWhatsappJob implements ShouldQueue
 
         $this->sendWa($order->customer->phone, $message);
 
-        $ownerPhone = config('app.owner_wa');
+        $ownerPhone = env('WA_OWNER');
         if ($ownerPhone) {
             $this->sendWa($ownerPhone, $message);
         }
@@ -54,6 +53,7 @@ class SendOrderWhatsappJob implements ShouldQueue
     private function sendWa($phone, $message)
     {
         // nanti integrasi ke provider WA
-        Log::info("Kirim WA ke {$phone}", ['message' => $message]);
+        $wa = new \App\Services\WhatsAppService();
+        $wa->sendText($phone, $message);
     }
 }

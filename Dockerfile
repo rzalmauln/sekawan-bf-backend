@@ -33,12 +33,16 @@ RUN docker-php-ext-configure gd \
 
 RUN docker-php-ext-install \
     pdo_mysql \
+
     mbstring \
     exif \
     pcntl \
     bcmath \
     gd \
     intl
+
+RUN pecl install redis \
+    && docker-php-ext-enable redis
 
 # Set working directory
 WORKDIR /var/www
