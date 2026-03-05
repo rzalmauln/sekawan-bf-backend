@@ -89,7 +89,7 @@ jobs:
           script: |
             cd /srv/sekawan
             export IMAGE_TAG=${{ github.sha }}
-            docker compose pull backend queue-worker
+            docker compose pull backend
             docker exec sekawan-backend php artisan down || true
             docker compose up -d backend queue-worker --force-recreate
             docker exec sekawan-backend php artisan migrate --force
