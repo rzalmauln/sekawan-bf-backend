@@ -33,7 +33,7 @@ class DummyEcommerceSeeder extends Seeder
                     'description' => 'Dummy bird for testing',
                     'price' => rand(800000, 2500000),
                     'stock' => rand(1, 5),
-                    'type' => 'lovebird',
+                    'type' => 'jantan',
                     'is_active' => true
                 ]);
 

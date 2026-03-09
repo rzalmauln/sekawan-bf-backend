@@ -19,6 +19,23 @@ class Item extends Model
         'type',
         'certificate_path',
         'certificate_password',
+        'gaya_main',
+        'body',
+        'umur',
+        'materi',
+        'volume',
+        'panjang_ekor',
+        'warna',
+        'warna_kaki',
+        'paruh',
+        'jenis_kepala',
+        'voer',
+        'extra_fooding',
+        'embun',
+        'jemur',
+        'mandi',
+        'tenggar',
+        'krodong_ablak',
         'is_active'
     ];
 

@@ -100,10 +100,14 @@ jobs:
 
             docker compose up -d backend queue-worker --force-recreate
 
+            sleep 5
+
             docker exec sekawan-backend php artisan migrate --force
             docker exec sekawan-backend php artisan config:cache
             docker exec sekawan-backend php artisan route:cache
 
             docker exec sekawan-backend php artisan up
+
+            docker exec sekawan-nginx-1 nginx -s reload
 
             docker image prune -af --filter "until=168h"
