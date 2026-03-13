@@ -4,20 +4,17 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class WhatsAppService
 {
     public function sendText($phone, $message)
     {
-        $phone = preg_replace('/[^0-9]/', '', $phone);
-
-        if (substr($phone, 0, 1) === '0') {
-            $phone = '62' . substr($phone, 1);
-        }
+        $chatId = $this->normalizeChatId($phone);
 
         $payload = [
             'session' => config('services.waha.session'),
-            'chatId'  => $phone . '@c.us',
+            'chatId'  => $chatId,
             'text'    => $message,
         ];
 
@@ -39,5 +36,16 @@ class WhatsAppService
         ]);
 
         return $response->json();
+    }
+
+    private function normalizeChatId(string $phone): string
+    {
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+
+        if (Str::startsWith($phone, '0')) {
+            $phone = '62' . substr($phone, 1);
+        }
+
+        return $phone . '@c.us';
     }
 }

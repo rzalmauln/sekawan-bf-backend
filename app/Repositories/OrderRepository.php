@@ -23,10 +23,16 @@ class OrderRepository
             ->findOrFail($id);
     }
 
+    public function findByInvoiceNumber(string $invoiceNumber){
+        return Order::with('orderItems.item')
+            ->where('invoice_number', $invoiceNumber)
+            ->first();
+    }
+
     public function cancel(Order $order)
     {
         $order->update([
-            'status' => 'cancelled',
+            'status' => Order::STATUS_CANCELLED,
             'cancelled_at' => now()
         ]);
         return $order;
@@ -35,7 +41,7 @@ class OrderRepository
     public function verify(Order $order)
     {
         $order->update([
-            'status' => 'verified',
+            'status' => Order::STATUS_PAID,
             'paid_at' => now()
         ]);
         return $order;
@@ -44,15 +50,24 @@ class OrderRepository
     public function ship(Order $order, string $trackingNumber)
     {
         $order->update([
-            'status' => 'shipped',
+            'status' => Order::STATUS_SHIPPED,
             'tracking_number' => $trackingNumber,
             'shipped_at' => now()
         ]);
         return $order;
     }
 
-     public function findById($id)
-     {
-         return Order::with('orderItems.item')->findOrFail($id);
-     }
+    public function complete(Order $order)
+    {
+        $order->update([
+            'status' => Order::STATUS_COMPLETED,
+            'completed_at' => now()
+        ]);
+        return $order;
+    }
+
+    public function findById($id)
+    {
+        return Order::with('orderItems.item')->findOrFail($id);
+    }
 }

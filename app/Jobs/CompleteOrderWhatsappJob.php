@@ -10,41 +10,44 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 
-class SendOrderWhatsappJob implements ShouldQueue
+class CompleteOrderWhatsappJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $orderId;
 
-    public $tries = 3; // retry maksimal 3x
-
+    public $tries = 3;
 
     public function __construct($orderId)
     {
         $this->orderId = $orderId;
     }
 
-    public function handle()
+    public function handle(): void
     {
         $order = Order::with('customer', 'orderItems')
             ->findOrFail($this->orderId);
 
         $message = $this->buildMessage($order);
 
-        $this->sendWa($order->customer->phone, $message, $order);
+        $this->sendWa($order->customer->phone, $message);
 
         $ownerPhone = env('WA_OWNER');
         if ($ownerPhone) {
-            $this->sendWa($ownerPhone, $message, $order);
+            $this->sendWa($ownerPhone, $message);
         }
     }
 
     private function buildMessage(Order $order): string
     {
-        $text = "Pesanan Anda berhasil dibuat.\n";
+        $text = "Pesanan Anda telah selesai.\n";
         $text .= "INVOICE: {$order->invoice_number}\n";
-        $text .= "Status: " . strtoupper($order->status) . "\n";
+        $text .= "Status: COMPLETED\n";
         $text .= "Total: Rp " . number_format((float) $order->total_price) . "\n";
+
+        if ($order->completed_at) {
+            $text .= "Selesai pada: " . $order->completed_at->format('d-m-Y H:i') . "\n";
+        }
 
         $text .= "\nDetail pesanan:\n";
 
@@ -52,8 +55,7 @@ class SendOrderWhatsappJob implements ShouldQueue
             $text .= "- {$item->item_name} x{$item->qty}\n";
         }
 
-        $text .= "\nPesanan Anda sedang menunggu verifikasi pembayaran.";
-        $text .= "\nMohon jangan membagikan nomor invoice ini kepada pihak lain.";
+        $text .= "\nTerima kasih telah berbelanja bersama kami.";
 
         return $text;
     }

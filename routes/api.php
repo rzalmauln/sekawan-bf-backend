@@ -43,7 +43,7 @@ Route::apiResource('items', ItemController::class, [
 
 // public api checkout
 Route::post('checkout', [CheckoutController::class, 'store']);
-
+Route::post('checkout/complete', [CheckoutController::class, 'complete']);
 
 Route::get('/coba', function () {
     return response()->json(['message' => 'Hello, World!']);

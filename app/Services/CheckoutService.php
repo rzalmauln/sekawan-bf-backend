@@ -2,7 +2,12 @@
 
 namespace App\Services;
 
+use App\Jobs\CancelOrderWhatsappJob;
+use App\Jobs\CompleteOrderWhatsappJob;
 use App\Jobs\SendOrderWhatsappJob;
+use App\Jobs\ShipOrderWhatsappJob;
+use App\Jobs\VerifyOrderWhatsappJob;
+use App\Models\Order;
 use App\Repositories\CustomerRepository;
 use App\Repositories\ItemRepository;
 use App\Repositories\OrderItemRepository;
@@ -35,7 +40,7 @@ class CheckoutService
                 $order = $this->orderRepo->create([
                     'invoice_number' => $this->generateInvoice(),
                     'customer_id' => $customer->id,
-                    'status' => 'pending',
+                    'status' => Order::STATUS_PENDING,
                     'total_price' => 0,
                     'payment_proof_path' => null
                 ]);
@@ -104,11 +109,11 @@ class CheckoutService
     
     public function verify(int $orderId)
     {
-        return DB::transaction(function () use ($orderId) {
+        $result = DB::transaction(function () use ($orderId) {
 
             $order = $this->orderRepo->findByIdForUpdate($orderId);
 
-            if ($order->status !== 'pending') {
+            if ($order->status !== Order::STATUS_PENDING) {
                 throw new \Exception('Order tidak bisa diverifikasi');
             }
 
@@ -119,15 +124,19 @@ class CheckoutService
                 'invoice' => $order->invoice_number
             ];
         });
+
+        VerifyOrderWhatsappJob::dispatch($orderId);
+
+        return $result;
     }
 
     public function ship(int $orderId, string $trackingNumber)
     {
-        return DB::transaction(function () use ($orderId, $trackingNumber) {
+        $result = DB::transaction(function () use ($orderId, $trackingNumber) {
 
             $order = $this->orderRepo->findByIdForUpdate($orderId);
 
-            if ($order->status !== 'verified') {
+            if ($order->status !== Order::STATUS_PAID) {
                 throw new \Exception('Order belum bisa dikirim');
             }
 
@@ -143,14 +152,18 @@ class CheckoutService
                 'tracking_number' => $trackingNumber
             ];
         });
+
+        ShipOrderWhatsappJob::dispatch($orderId);
+
+        return $result;
     }
 
     public function cancel(int $id)
     {
-        DB::transaction(function () use ($id) {
+        $result = DB::transaction(function () use ($id) {
 
             $order = $this->orderRepo->findByIdForUpdate($id);
-            if ($order->status !== 'pending') {
+            if ($order->status !== Order::STATUS_PENDING) {
                 throw new \Exception('Order tidak bisa dibatalkan');
             }
             foreach ($order->orderItems as $orderItem) {
@@ -166,6 +179,31 @@ class CheckoutService
             ];
             
         });
+
+        CancelOrderWhatsappJob::dispatch($id);
+
+        return $result;
+    }
+
+    public function complete(string $invoiceNumber)
+    {
+        $result = DB::transaction(function () use ($invoiceNumber) {
+
+            $order = $this->orderRepo->findByInvoiceNumber($invoiceNumber);
+            if ($order->status !== Order::STATUS_SHIPPED) {
+                throw new \Exception('Order belum bisa selesai');
+            }
+            $this->orderRepo->complete($order);
+            return [
+                'message' => 'Order berhasil selesai',
+                'invoice' => $order->invoice_number
+            ];
+        });
+
+        $order = $this->orderRepo->findByInvoiceNumber($invoiceNumber);
+        CompleteOrderWhatsappJob::dispatch($order->id);
+
+        return $result;
     }
 
     private function generateInvoice(): string

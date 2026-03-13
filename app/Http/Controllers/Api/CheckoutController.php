@@ -67,4 +67,18 @@ class CheckoutController extends Controller
             ], 400);
         }
     }
+
+    public function complete(Request $request){
+        $validated = $request->validate([
+            'invoice_number' => 'required|string|exists:orders,invoice_number'
+        ]);
+        try {
+            $result = $this->checkoutService->complete($validated['invoice_number']);
+            return response()->json($result);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 400);
+        }
+    }
 }
