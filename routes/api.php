@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\ItemController;
 use App\Http\Controllers\Api\CheckoutController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\OrderController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('login', [AuthController::class, 'login']);
@@ -25,9 +26,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('checkout/verify', [CheckoutController::class, 'verify']);
     Route::post('checkout/ship', [CheckoutController::class, 'ship']);
     Route::post('checkout/cancel', [CheckoutController::class, 'cancel']);
+    Route::get('orders', [OrderController::class, 'index']);
     
     // private api dashboard
     Route::get('dashboard/sales', [DashboardController::class, 'sales']);
+    Route::get('dashboard/sales/export', [DashboardController::class, 'exportSales']);
     Route::get('dashboard/summary', [DashboardController::class, 'summary']);
 });
 

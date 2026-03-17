@@ -6,8 +6,28 @@ use App\Models\Order;
 
 class OrderRepository
 {
-    public function create(array $data){
+    public function create(array $data)
+    {
         return Order::create($data);
+    }
+
+    public function paginateForAdmin(array $filters = [], int $perPage = 15)
+    {
+        return Order::with(['customer', 'orderItems'])
+            ->when($filters['status'] ?? null, function ($query, $status) {
+                $query->where('status', $status);
+            })
+            ->when($filters['search'] ?? null, function ($query, $search) {
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->where('invoice_number', 'like', '%' . $search . '%')
+                        ->orWhereHas('customer', function ($customerQuery) use ($search) {
+                            $customerQuery->where('name', 'like', '%' . $search . '%')
+                                ->orWhere('phone', 'like', '%' . $search . '%');
+                        });
+                });
+            })
+            ->latest()
+            ->paginate($perPage);
     }
 
     public function updateTotal(Order $order, float $total)

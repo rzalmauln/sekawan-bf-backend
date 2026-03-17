@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exports\SalesExport;
 use App\Http\Controllers\Controller;
 use App\Models\Catalog;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
 class DashboardController extends Controller
 {
@@ -86,5 +88,26 @@ class DashboardController extends Controller
             'year' => (int) $year,
             'data' => $sales
         ]);
+    }
+
+    public function exportSales(Request $request)
+    {
+        $validated = $request->validate([
+            'year' => 'nullable|integer|min:2000|max:2100',
+            'month' => 'nullable|integer|min:1|max:12',
+        ]);
+
+        $year = (int) ($validated['year'] ?? now()->year);
+        $month = isset($validated['month']) ? (int) $validated['month'] : null;
+
+        $filename = 'sales-' . $year;
+        if ($month !== null) {
+            $filename .= '-' . str_pad((string) $month, 2, '0', STR_PAD_LEFT);
+        }
+
+        return Excel::download(
+            new SalesExport($year, $month),
+            $filename . '.xlsx'
+        );
     }
 }
