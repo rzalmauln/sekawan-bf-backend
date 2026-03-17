@@ -1,5 +1,21 @@
 # ---------- Stage 1: Composer ----------
-FROM composer:2 AS vendor
+FROM php:8.3-cli-alpine AS vendor
+
+RUN apk add --no-cache \
+    freetype-dev \
+    libjpeg-turbo-dev \
+    libpng-dev \
+    libzip-dev \
+    zip \
+    unzip
+
+RUN docker-php-ext-configure gd \
+    --with-freetype \
+    --with-jpeg
+
+RUN docker-php-ext-install gd zip
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
