@@ -24,7 +24,7 @@ class SalesExport implements FromCollection, ShouldAutoSize, WithHeadings, WithM
             ->when($this->month, function ($query, $month) {
                 $query->whereMonth('completed_at', $month);
             })
-            ->orderBy('completed_at')
+            ->orderBy('completed_at', 'desc')
             ->get();
     }
 
