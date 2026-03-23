@@ -40,6 +40,8 @@ class ShipOrderWhatsappJob implements ShouldQueue
 
     private function buildMessage(Order $order): string
     {
+        $confirmationUrl = rtrim(config('app.url'), '/') . '/order/confirm/' . $order->invoice_number;
+
         $text = "Pesanan Anda sudah dikirim.\n";
         $text .= "INVOICE: {$order->invoice_number}\n";
         $text .= "Status: SHIPPED\n";
@@ -59,7 +61,8 @@ class ShipOrderWhatsappJob implements ShouldQueue
             $text .= "- {$item->item_name} x{$item->qty}\n";
         }
 
-        $text .= "\nSilakan simpan nomor invoice untuk konfirmasi pesanan selesai.";
+        $text .= "\nKonfirmasi pesanan selesai melalui link berikut:\n{$confirmationUrl}";
+        $text .= "\nMohon jangan bagikan link atau nomor invoice ini ke pihak lain.";
 
         return $text;
     }
