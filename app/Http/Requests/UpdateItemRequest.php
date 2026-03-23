@@ -34,7 +34,7 @@ class UpdateItemRequest extends FormRequest
             'video_path' => 'nullable|file|mimetypes:video/mp4,video/quicktime,video/x-msvideo,video/webm|max:10240',
             'gaya_main' => 'nullable|string|max:255',
             'body' => 'nullable|string|max:255',
-            'umur' => 'nullable|string|max:255',
+            'umur' => 'nullable|integer|min:0|max:240',
             'materi' => 'nullable|string|max:255',
             'volume' => 'nullable|string|max:255',
             'panjang_ekor' => 'nullable|string|max:255',

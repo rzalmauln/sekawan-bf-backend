@@ -43,6 +43,7 @@ class Item extends Model
 
     protected $casts = [
         'price' => 'decimal:2',
+        'umur' => 'integer',
         'is_active' => 'boolean'
     ];
 

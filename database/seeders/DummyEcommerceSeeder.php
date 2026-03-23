@@ -38,7 +38,7 @@ class DummyEcommerceSeeder extends Seeder
                     'video_path' => 'items/videos/' . Str::slug($catalog->name . '-bird-' . $i) . '.mp4',
                     'gaya_main' => collect(['Nagen', 'Teler', 'Fighter'])->random(),
                     'body' => collect(['Besar', 'Sedang', 'Kecil'])->random(),
-                    'umur' => collect(['Muda', 'Dewasa', 'Tua'])->random(),
+                    'umur' => collect([1, 3, 6, 12, 18, 24])->random(),
                     'materi' => collect(['Isian rapat', 'Tembakan', 'Campuran'])->random(),
                     'volume' => collect(['Keras', 'Sedang', 'Tipis'])->random(),
                     'panjang_ekor' => collect(['Panjang', 'Sedang', 'Pendek'])->random(),
