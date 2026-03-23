@@ -29,11 +29,15 @@ class OrderController extends Controller
         return OrderResource::collection($orders);
     }
 
-    public function getOrderByInvoice(Request $request){
-        $validated = $request->validate([
-            'invoice_number' => 'required|string|exists:orders,invoice_number'
-        ]);
-        $order = $this->orderRepository->findByInvoiceNumber($validated['invoice_number']);
+    public function getOrderByInvoice(string $invoice_number)
+    {
+        validator(
+            ['invoice_number' => $invoice_number],
+            ['invoice_number' => 'required|string|exists:orders,invoice_number']
+        )->validate();
+
+        $order = $this->orderRepository->findByInvoiceNumber($invoice_number);
+
         return new OrderResource($order);
     }
 }
