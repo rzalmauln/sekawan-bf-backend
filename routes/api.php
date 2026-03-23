@@ -51,6 +51,9 @@ Route::post('checkout/complete', [CheckoutController::class, 'complete']);
 // public api order by invoice
 Route::get('orders/invoice/{invoice_number}', [OrderController::class, 'getOrderByInvoice']);
 
+// public api check certificate
+Route::post('verify-password-certificate', [ItemController::class, 'verifyPasswordCertificate']);
+
 Route::get('/coba', function () {
     return response()->json(['message' => 'Hello, World!']);
 });

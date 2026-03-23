@@ -17,6 +17,8 @@ class Item extends Model
         'price',
         'stock',
         'type',
+        'image_path',
+        'video_path',
         'certificate_path',
         'certificate_password',
         'gaya_main',

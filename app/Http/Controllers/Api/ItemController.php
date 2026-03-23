@@ -33,19 +33,34 @@ class ItemController extends Controller
 
     public function store(StoreItemRequest $request)
     {
-        $item = $this->service->store($request->all());
+        $item = $this->service->store($request->validated());
         return (new ItemResource($item))->response()->setStatusCode(201);
     }
 
     public function update(UpdateItemRequest $request, Item $item)
     {
-        $updateItem = $this->service->update($item, $request->all());
+        $updateItem = $this->service->update($item, $request->validated());
         return new ItemResource($updateItem);
     }
 
     public function destroy(Item $item){
         $this->service->destroy($item);
         return response()->json(['message' => 'Catalog deleted successfully']);
+    }
+
+    public function verifyPasswordCertificate(Request $request){
+        $validated = $request->validate([
+            'item_id' => 'required|integer|exists:items,id',
+            'password' => 'required|string'
+        ]);
+        try {
+            $result = $this->service->checkPasswordCertificate($validated['item_id'], $validated['password']);
+            return response()->json($result);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 400);
+        }
     }
 
 }
