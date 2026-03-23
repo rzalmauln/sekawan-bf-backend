@@ -48,6 +48,9 @@ Route::apiResource('items', ItemController::class, [
 Route::post('checkout', [CheckoutController::class, 'store']);
 Route::post('checkout/complete', [CheckoutController::class, 'complete']);
 
+// public api order by invoice
+Route::get('orders/invoice/{invoice_number}', [OrderController::class, 'getOrderByInvoice']);
+
 Route::get('/coba', function () {
     return response()->json(['message' => 'Hello, World!']);
 });

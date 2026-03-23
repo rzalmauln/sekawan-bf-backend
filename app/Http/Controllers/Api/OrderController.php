@@ -28,4 +28,12 @@ class OrderController extends Controller
 
         return OrderResource::collection($orders);
     }
+
+    public function getOrderByInvoice(Request $request){
+        $validated = $request->validate([
+            'invoice_number' => 'required|string|exists:orders,invoice_number'
+        ]);
+        $order = $this->orderRepository->findByInvoiceNumber($validated['invoice_number']);
+        return new OrderResource($order);
+    }
 }
