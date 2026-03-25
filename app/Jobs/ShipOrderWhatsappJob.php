@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Concerns\BuildsOrderWhatsappMessage;
 use App\Models\Order;
 use App\Services\WhatsAppService;
 use Illuminate\Bus\Queueable;
@@ -12,7 +13,7 @@ use Illuminate\Queue\SerializesModels;
 
 class ShipOrderWhatsappJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use BuildsOrderWhatsappMessage, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $orderId;
 
@@ -41,30 +42,32 @@ class ShipOrderWhatsappJob implements ShouldQueue
     private function buildMessage(Order $order): string
     {
         $confirmationUrl = rtrim(config('app.url'), '/') . '/order/confirm/' . $order->invoice_number;
-
-        $text = "Pesanan Anda sudah dikirim.\n";
-        $text .= "INVOICE: {$order->invoice_number}\n";
-        $text .= "Status: SHIPPED\n";
-        $text .= "Total: Rp " . number_format((float) $order->total_price) . "\n";
-
-        if ($order->tracking_number) {
-            $text .= "Nomor resi: {$order->tracking_number}\n";
-        }
+        $informationLines = [
+            'Pesanan Anda sudah kami kirim.',
+            '',
+            'Nomor Resi : *' . ($order->tracking_number ?: '-') . '*',
+        ];
 
         if ($order->shipped_at) {
-            $text .= "Dikirim pada: " . $order->shipped_at->format('d-m-Y H:i') . "\n";
+            $informationLines[] = 'Waktu kirim : ' . $order->shipped_at->format('d-m-Y H:i');
         }
 
-        $text .= "\nDetail pesanan:\n";
+        $informationLines[] = '';
+        $informationLines[] = 'Silakan pantau pengiriman Anda menggunakan nomor resi di atas.';
+        $informationLines[] = 'Jika pesanan sudah diterima dengan baik, Anda dapat melakukan konfirmasi melalui link berikut:';
+        $informationLines[] = '';
+        $informationLines[] = $confirmationUrl;
+        $informationLines[] = '';
+        $informationLines[] = '_Link / nomor invoice ini bersifat pribadi. Mohon jangan dibagikan ke pihak lain._';
+        $informationLines[] = '';
+        $informationLines[] = 'Terima kasih.';
 
-        foreach ($order->orderItems as $item) {
-            $text .= "- {$item->item_name} x{$item->qty}\n";
-        }
-
-        $text .= "\nKonfirmasi pesanan selesai melalui link berikut:\n{$confirmationUrl}";
-        $text .= "\nMohon jangan bagikan link atau nomor invoice ini ke pihak lain.";
-
-        return $text;
+        return $this->buildOrderWhatsappMessage(
+            $order,
+            'PESANAN DIKIRIM',
+            'INFORMASI PENGIRIMAN',
+            $informationLines
+        );
     }
 
     private function sendWa(string $phone, string $message): void

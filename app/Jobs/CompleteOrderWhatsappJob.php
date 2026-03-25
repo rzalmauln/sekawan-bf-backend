@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Concerns\BuildsOrderWhatsappMessage;
 use App\Models\Order;
 use App\Services\WhatsAppService;
 use Illuminate\Bus\Queueable;
@@ -12,7 +13,7 @@ use Illuminate\Queue\SerializesModels;
 
 class CompleteOrderWhatsappJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use BuildsOrderWhatsappMessage, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $orderId;
 
@@ -40,24 +41,28 @@ class CompleteOrderWhatsappJob implements ShouldQueue
 
     private function buildMessage(Order $order): string
     {
-        $text = "Pesanan Anda telah selesai.\n";
-        $text .= "INVOICE: {$order->invoice_number}\n";
-        $text .= "Status: COMPLETED\n";
-        $text .= "Total: Rp " . number_format((float) $order->total_price) . "\n";
+        $informationLines = [
+            'Pesanan Anda telah dinyatakan selesai.',
+            'Terima kasih telah mempercayakan pembelian Anda kepada kami.',
+        ];
 
         if ($order->completed_at) {
-            $text .= "Selesai pada: " . $order->completed_at->format('d-m-Y H:i') . "\n";
+            $informationLines[] = '';
+            $informationLines[] = 'Waktu selesai : ' . $order->completed_at->format('d-m-Y H:i');
         }
 
-        $text .= "\nDetail pesanan:\n";
+        $informationLines[] = '';
+        $informationLines[] = 'Semoga burung yang Anda pilih sesuai harapan dan membawa kepuasan.';
+        $informationLines[] = 'Kami tunggu pesanan Anda berikutnya.';
+        $informationLines[] = '';
+        $informationLines[] = 'Terima kasih.';
 
-        foreach ($order->orderItems as $item) {
-            $text .= "- {$item->item_name} x{$item->qty}\n";
-        }
-
-        $text .= "\nTerima kasih telah berbelanja bersama kami.";
-
-        return $text;
+        return $this->buildOrderWhatsappMessage(
+            $order,
+            'PESANAN SELESAI',
+            'INFORMASI PESANAN',
+            $informationLines
+        );
     }
 
     private function sendWa(string $phone, string $message): void

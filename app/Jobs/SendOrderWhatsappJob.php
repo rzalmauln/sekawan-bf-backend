@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Concerns\BuildsOrderWhatsappMessage;
 use App\Models\Order;
 use App\Services\WhatsAppService;
 use Illuminate\Bus\Queueable;
@@ -12,7 +13,7 @@ use Illuminate\Queue\SerializesModels;
 
 class SendOrderWhatsappJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use BuildsOrderWhatsappMessage, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $orderId;
 
@@ -41,21 +42,22 @@ class SendOrderWhatsappJob implements ShouldQueue
 
     private function buildMessage(Order $order): string
     {
-        $text = "Pesanan Anda berhasil dibuat.\n";
-        $text .= "INVOICE: {$order->invoice_number}\n";
-        $text .= "Status: " . strtoupper($order->status) . "\n";
-        $text .= "Total: Rp " . number_format((float) $order->total_price) . "\n";
-
-        $text .= "\nDetail pesanan:\n";
-
-        foreach ($order->orderItems as $item) {
-            $text .= "- {$item->item_name} x{$item->qty}\n";
-        }
-
-        $text .= "\nPesanan Anda sedang menunggu verifikasi pembayaran.";
-        $text .= "\nMohon jangan membagikan nomor invoice ini kepada pihak lain.";
-
-        return $text;
+        return $this->buildOrderWhatsappMessage(
+            $order,
+            'MENUNGGU VERIFIKASI',
+            'INFORMASI PESANAN',
+            [
+                'Pesanan Anda sudah kami terima.',
+                'Pembayaran Anda sedang menunggu verifikasi admin.',
+                '',
+                'Jika Anda sudah melakukan pembayaran, mohon tunggu proses pengecekan dari admin.',
+                'Notifikasi berikutnya akan kami kirim setelah pembayaran berhasil dikonfirmasi.',
+                '',
+                '_Link / nomor invoice ini bersifat pribadi. Mohon jangan dibagikan ke pihak lain._',
+                '',
+                'Terima kasih.',
+            ]
+        );
     }
 
     private function sendWa(string $phone, string $message): void

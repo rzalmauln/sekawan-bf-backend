@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Concerns\BuildsOrderWhatsappMessage;
 use App\Models\Order;
 use App\Services\WhatsAppService;
 use Illuminate\Bus\Queueable;
@@ -12,7 +13,7 @@ use Illuminate\Queue\SerializesModels;
 
 class VerifyOrderWhatsappJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use BuildsOrderWhatsappMessage, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $orderId;
 
@@ -40,24 +41,27 @@ class VerifyOrderWhatsappJob implements ShouldQueue
 
     private function buildMessage(Order $order): string
     {
-        $text = "Pembayaran pesanan Anda sudah kami konfirmasi.\n";
-        $text .= "INVOICE: {$order->invoice_number}\n";
-        $text .= "Status: PAID\n";
-        $text .= "Total: Rp " . number_format((float) $order->total_price) . "\n";
+        $informationLines = [
+            'Pembayaran Anda telah berhasil kami konfirmasi.',
+            'Pesanan Anda sedang kami proses untuk tahap berikutnya.',
+        ];
 
         if ($order->paid_at) {
-            $text .= "Dikonfirmasi pada: " . $order->paid_at->format('d-m-Y H:i') . "\n";
+            $informationLines[] = '';
+            $informationLines[] = 'Waktu konfirmasi : ' . $order->paid_at->format('d-m-Y H:i');
         }
 
-        $text .= "\nDetail pesanan:\n";
+        $informationLines[] = '';
+        $informationLines[] = 'Mohon tunggu notifikasi selanjutnya saat pesanan sudah dikirim.';
+        $informationLines[] = '';
+        $informationLines[] = 'Terima kasih.';
 
-        foreach ($order->orderItems as $item) {
-            $text .= "- {$item->item_name} x{$item->qty}\n";
-        }
-
-        $text .= "\nPesanan Anda sedang kami proses.";
-
-        return $text;
+        return $this->buildOrderWhatsappMessage(
+            $order,
+            'PEMBAYARAN TERVERIFIKASI',
+            'INFORMASI PESANAN',
+            $informationLines
+        );
     }
 
     private function sendWa(string $phone, string $message): void

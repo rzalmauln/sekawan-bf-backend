@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Concerns\BuildsOrderWhatsappMessage;
 use App\Models\Order;
 use App\Services\WhatsAppService;
 use Illuminate\Bus\Queueable;
@@ -12,7 +13,7 @@ use Illuminate\Queue\SerializesModels;
 
 class CancelOrderWhatsappJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use BuildsOrderWhatsappMessage, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $orderId;
 
@@ -40,24 +41,26 @@ class CancelOrderWhatsappJob implements ShouldQueue
 
     private function buildMessage(Order $order): string
     {
-        $text = "Pesanan Anda telah dibatalkan.\n";
-        $text .= "INVOICE: {$order->invoice_number}\n";
-        $text .= "Status: CANCELLED\n";
-        $text .= "Total: Rp " . number_format((float) $order->total_price) . "\n";
+        $informationLines = [
+            'Pesanan Anda telah dibatalkan.',
+        ];
 
         if ($order->cancelled_at) {
-            $text .= "Dibatalkan pada: " . $order->cancelled_at->format('d-m-Y H:i') . "\n";
+            $informationLines[] = 'Waktu batal : ' . $order->cancelled_at->format('d-m-Y H:i');
         }
 
-        $text .= "\nDetail pesanan:\n";
+        $informationLines[] = '';
+        $informationLines[] = 'Jika pembatalan ini bukan dari Anda atau Anda memerlukan bantuan lebih lanjut, silakan hubungi admin kami.';
+        $informationLines[] = 'Kami siap membantu Anda untuk proses pemesanan kembali jika diperlukan.';
+        $informationLines[] = '';
+        $informationLines[] = 'Terima kasih.';
 
-        foreach ($order->orderItems as $item) {
-            $text .= "- {$item->item_name} x{$item->qty}\n";
-        }
-
-        $text .= "\nJika ini bukan permintaan Anda, silakan hubungi admin.";
-
-        return $text;
+        return $this->buildOrderWhatsappMessage(
+            $order,
+            'PESANAN DIBATALKAN',
+            'INFORMASI PESANAN',
+            $informationLines
+        );
     }
 
     private function sendWa(string $phone, string $message): void
