@@ -26,7 +26,7 @@ class CompleteOrderWhatsappJob implements ShouldQueue
 
     public function handle(): void
     {
-        $order = Order::with('customer', 'orderItems')
+        $order = Order::with('customer', 'orderItems.item')
             ->findOrFail($this->orderId);
 
         $message = $this->buildMessage($order);
@@ -55,13 +55,28 @@ class CompleteOrderWhatsappJob implements ShouldQueue
         $informationLines[] = 'Semoga burung yang Anda pilih sesuai harapan dan membawa kepuasan.';
         $informationLines[] = 'Kami tunggu pesanan Anda berikutnya.';
         $informationLines[] = '';
+        $informationLines[] = '*INFORMASI SERTIFIKAT:*';
+        $informationLines[] = 'Password sertifikat untuk setiap item tertera pada rincian pesanan di atas.';
+        $informationLines[] = '_Mohon simpan dan jangan bagikan password sertifikat kepada pihak lain._';
+        $informationLines[] = '';
         $informationLines[] = 'Terima kasih.';
 
         return $this->buildOrderWhatsappMessage(
             $order,
             'PESANAN SELESAI',
             'INFORMASI PESANAN',
-            $informationLines
+            $informationLines,
+            function ($orderItem) {
+                $certificatePassword = $orderItem->item?->certificate_password;
+
+                if (!$certificatePassword) {
+                    return [];
+                }
+
+                return [
+                    '   Password Sertifikat : *' . $certificatePassword . '*',
+                ];
+            }
         );
     }
 

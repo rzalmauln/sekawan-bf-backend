@@ -10,7 +10,8 @@ trait BuildsOrderWhatsappMessage
         Order $order,
         string $statusLabel,
         string $informationTitle,
-        array $informationLines
+        array $informationLines,
+        ?callable $itemDetailBuilder = null
     ): string {
         $customerName = $order->customer?->name ?: 'Pelanggan Yth.';
         $date = $order->created_at
@@ -31,6 +32,18 @@ trait BuildsOrderWhatsappMessage
             $text .= "   Qty   : {$item->qty}\n";
             $text .= "   Harga : " . $this->formatRupiah((float) $item->unit_price) . "\n";
             $text .= "   Total : " . $this->formatRupiah((float) $item->subtotal) . "\n\n";
+
+            if ($itemDetailBuilder) {
+                $extraLines = $itemDetailBuilder($item) ?? [];
+
+                foreach ($extraLines as $line) {
+                    $text .= $line . "\n";
+                }
+
+                if (!empty($extraLines)) {
+                    $text .= "\n";
+                }
+            }
         }
 
         $text .= "--------------------------------------\n";
