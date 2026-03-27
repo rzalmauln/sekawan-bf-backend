@@ -102,6 +102,8 @@ jobs:
 
             sleep 5
 
+            docker exec sekawan-backend php artisan storage:link || true
+
             docker exec sekawan-backend php artisan migrate --force
             docker exec sekawan-backend php artisan config:cache
             docker exec sekawan-backend php artisan route:cache
