@@ -11,7 +11,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 
-class ShipOrderWhatsappJob implements ShouldQueue
+class RequestPaymentWhatsappJob implements ShouldQueue
 {
     use BuildsOrderWhatsappMessage, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -42,21 +42,20 @@ class ShipOrderWhatsappJob implements ShouldQueue
     private function buildMessage(Order $order): string
     {
         $confirmationUrl = rtrim(config('app.frontend_url', config('app.url')), '/') . '/order/confirm/' . $order->invoice_number;
+
         $informationLines = [
-            'Pesanan Anda sudah kami kirim.',
+            'Pesanan Anda telah kami verifikasi dan total pembayaran sudah diperbarui dengan ongkir.',
+            'Silakan lakukan pembayaran dan upload bukti pembayaran melalui link berikut:',
             '',
-            'Nomor Resi : *' . ($order->tracking_number ?: '-') . '*',
+            $confirmationUrl,
         ];
 
-        if ($order->shipped_at) {
-            $informationLines[] = 'Waktu kirim : ' . $order->shipped_at->format('d-m-Y H:i');
+        if ($order->payment_due_at) {
+            $informationLines[] = '';
+            $informationLines[] = 'Batas waktu pembayaran : ' . $order->payment_due_at->format('d-m-Y H:i');
+            $informationLines[] = 'Apabila dalam 1x24 jam pembayaran belum dikonfirmasi, pesanan akan otomatis dibatalkan.';
         }
 
-        $informationLines[] = '';
-        $informationLines[] = 'Silakan pantau pengiriman Anda menggunakan nomor resi di atas.';
-        $informationLines[] = 'Jika pesanan sudah diterima dengan baik, Anda dapat melakukan konfirmasi melalui link berikut:';
-        $informationLines[] = '';
-        $informationLines[] = $confirmationUrl;
         $informationLines[] = '';
         $informationLines[] = '_Link / nomor invoice ini bersifat pribadi. Mohon jangan dibagikan ke pihak lain._';
         $informationLines[] = '';
@@ -64,8 +63,8 @@ class ShipOrderWhatsappJob implements ShouldQueue
 
         return $this->buildOrderWhatsappMessage(
             $order,
-            'PESANAN DIKIRIM',
-            'INFORMASI PENGIRIMAN',
+            'MENUNGGU PEMBAYARAN',
+            'INFORMASI PEMBAYARAN',
             $informationLines
         );
     }

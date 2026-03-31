@@ -44,14 +44,14 @@ class SendOrderWhatsappJob implements ShouldQueue
     {
         return $this->buildOrderWhatsappMessage(
             $order,
-            'MENUNGGU VERIFIKASI',
+            'BOOKING',
             'INFORMASI PESANAN',
             [
                 'Pesanan Anda sudah kami terima.',
-                'Pembayaran Anda sedang menunggu verifikasi admin.',
+                'Saat ini pesanan Anda masuk ke tahap booking.',
                 '',
-                'Jika Anda sudah melakukan pembayaran, mohon tunggu proses pengecekan dari admin.',
-                'Notifikasi berikutnya akan kami kirim setelah pembayaran berhasil dikonfirmasi.',
+                'Admin akan melakukan verifikasi pesanan dan menghitung ongkir terlebih dahulu.',
+                'Setelah itu, kami akan mengirimkan total tagihan akhir beserta link untuk upload bukti pembayaran.',
                 '',
                 '_Link / nomor invoice ini bersifat pribadi. Mohon jangan dibagikan ke pihak lain._',
                 '',

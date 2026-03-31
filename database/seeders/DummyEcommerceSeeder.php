@@ -2,13 +2,13 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 use App\Models\Catalog;
+use App\Models\Customer;
 use App\Models\Item;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\Customer;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class DummyEcommerceSeeder extends Seeder
 {
@@ -16,26 +16,24 @@ class DummyEcommerceSeeder extends Seeder
     {
         $catalogs = Catalog::all();
 
-        // ========================
-        // Create Items
-        // ========================
-
         $items = [];
 
         foreach ($catalogs as $catalog) {
-
             for ($i = 1; $i <= 3; $i++) {
+                $slug = Str::slug($catalog->name . '-bird-' . $i);
 
                 $item = Item::create([
                     'catalog_id' => $catalog->id,
                     'name' => $catalog->name . ' Bird ' . $i,
-                    'slug' => Str::slug($catalog->name . '-bird-' . $i),
+                    'slug' => $slug,
                     'description' => 'Dummy bird for testing',
                     'price' => rand(800000, 2500000),
                     'stock' => rand(1, 5),
                     'type' => 'jantan',
-                    'image_path' => 'items/images/' . Str::slug($catalog->name . '-bird-' . $i) . '.jpg',
-                    'video_path' => 'items/videos/' . Str::slug($catalog->name . '-bird-' . $i) . '.mp4',
+                    'certificate_path' => 'certificates/certificate-' . $slug . '.png',
+                    'certificate_password' => strtoupper(Str::random(8)),
+                    'image_path' => 'items/images/' . $slug . '.jpg',
+                    'video_path' => 'items/videos/' . $slug . '.mp4',
                     'gaya_main' => collect(['Nagen', 'Teler', 'Fighter'])->random(),
                     'body' => collect(['Besar', 'Sedang', 'Kecil'])->random(),
                     'umur' => collect([1, 3, 6, 12, 18, 24])->random(),
@@ -53,21 +51,16 @@ class DummyEcommerceSeeder extends Seeder
                     'mandi' => collect(['Pagi', 'Sore', 'Pagi dan sore'])->random(),
                     'tenggar' => collect(['1 kali', '2 kali', '3 kali'])->random(),
                     'krodong_ablak' => collect(['Ya', 'Tidak'])->random(),
-                    'is_active' => true
+                    'is_active' => true,
                 ]);
 
                 $items[] = $item;
             }
         }
 
-        // ========================
-        // Create Customers
-        // ========================
-
         $customers = [];
 
         for ($i = 1; $i <= 10; $i++) {
-
             $customers[] = Customer::create([
                 'name' => 'Customer ' . $i,
                 'email' => "customer{$i}@mail.com",
@@ -75,44 +68,44 @@ class DummyEcommerceSeeder extends Seeder
                 'address' => 'Dummy address',
                 'city' => 'Jakarta',
                 'province' => 'DKI Jakarta',
-                'postal_code' => '12345'
+                'postal_code' => '12345',
             ]);
         }
 
-        // ========================
-        // Create Orders
-        // ========================
+        $statuses = [
+            Order::STATUS_BOOKING,
+            Order::STATUS_PAID,
+            Order::STATUS_SHIPPED,
+            Order::STATUS_COMPLETED,
+            Order::STATUS_CANCELLED,
+        ];
 
         for ($i = 1; $i <= 25; $i++) {
-
             $customer = $customers[array_rand($customers)];
+            $status = $statuses[array_rand($statuses)];
 
             $order = Order::create([
                 'invoice_number' => 'INV-' . strtoupper(Str::random(8)),
                 'customer_id' => $customer->id,
                 'total_price' => 0,
-                'status' => collect([
-                    'pending',
-                    'paid',
-                    'shipped',
-                    'completed'
-                ])->random(),
-                'paid_at' => now()->subDays(rand(1, 30)),
-                'shipped_at' => now()->subDays(rand(1, 30)),
-                'completed_at' => now()->subDays(rand(1, 30))
+                'shipping_cost' => null,
+                'status' => $status,
+                'payment_proof_path' => null,
+                'payment_requested_at' => null,
+                'payment_due_at' => null,
+                'paid_at' => null,
+                'shipped_at' => null,
+                'completed_at' => null,
+                'cancelled_at' => null,
             ]);
 
-            $total = 0;
-
+            $subtotal = 0;
             $orderItemsCount = rand(1, 3);
 
             for ($j = 1; $j <= $orderItemsCount; $j++) {
-
                 $item = $items[array_rand($items)];
-
                 $qty = rand(1, 2);
-
-                $subtotal = $item->price * $qty;
+                $lineSubtotal = $item->price * $qty;
 
                 OrderItem::create([
                     'order_id' => $order->id,
@@ -120,14 +113,43 @@ class DummyEcommerceSeeder extends Seeder
                     'item_name' => $item->name,
                     'unit_price' => $item->price,
                     'qty' => $qty,
-                    'subtotal' => $subtotal
+                    'subtotal' => $lineSubtotal,
                 ]);
 
-                $total += $subtotal;
+                $subtotal += $lineSubtotal;
             }
 
+            $shippingCost = in_array($status, [Order::STATUS_PAID, Order::STATUS_SHIPPED, Order::STATUS_COMPLETED], true)
+                ? rand(10000, 75000)
+                : null;
+
+            $paymentRequestedAt = $shippingCost !== null ? now()->subHours(rand(2, 48)) : null;
+            $paymentDueAt = $paymentRequestedAt ? $paymentRequestedAt->copy()->addDay() : null;
+            $paidAt = in_array($status, [Order::STATUS_PAID, Order::STATUS_SHIPPED, Order::STATUS_COMPLETED], true)
+                ? now()->subDays(rand(1, 15))
+                : null;
+            $shippedAt = in_array($status, [Order::STATUS_SHIPPED, Order::STATUS_COMPLETED], true)
+                ? now()->subDays(rand(1, 10))
+                : null;
+            $completedAt = $status === Order::STATUS_COMPLETED
+                ? now()->subDays(rand(1, 7))
+                : null;
+            $cancelledAt = $status === Order::STATUS_CANCELLED
+                ? now()->subDays(rand(1, 7))
+                : null;
+
             $order->update([
-                'total_price' => $total
+                'shipping_cost' => $shippingCost,
+                'total_price' => $subtotal + ($shippingCost ?? 0),
+                'payment_proof_path' => in_array($status, [Order::STATUS_PAID, Order::STATUS_SHIPPED, Order::STATUS_COMPLETED], true)
+                    ? 'payment_proofs/proof-' . Str::lower(Str::random(10)) . '.jpg'
+                    : null,
+                'payment_requested_at' => $paymentRequestedAt,
+                'payment_due_at' => $paymentDueAt,
+                'paid_at' => $paidAt,
+                'shipped_at' => $shippedAt,
+                'completed_at' => $completedAt,
+                'cancelled_at' => $cancelledAt,
             ]);
         }
     }

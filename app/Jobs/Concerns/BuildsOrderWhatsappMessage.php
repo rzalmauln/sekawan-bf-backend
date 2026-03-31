@@ -17,6 +17,8 @@ trait BuildsOrderWhatsappMessage
         $date = $order->created_at
             ? $order->created_at->locale('id')->translatedFormat('d F Y')
             : now()->locale('id')->translatedFormat('d F Y');
+        $subtotal = (float) $order->orderItems->sum('subtotal');
+        $shippingCost = (float) ($order->shipping_cost ?? 0);
 
         $text = "*INVOICE #{$order->invoice_number}*\n";
         $text .= "--------------------------------------\n";
@@ -47,8 +49,8 @@ trait BuildsOrderWhatsappMessage
         }
 
         $text .= "--------------------------------------\n";
-        $text .= "SUBTOTAL    : " . $this->formatRupiah((float) $order->total_price) . "\n";
-        $text .= "ONGKIR      : " . $this->formatRupiah(0) . "\n";
+        $text .= "SUBTOTAL    : " . $this->formatRupiah($subtotal) . "\n";
+        $text .= "ONGKIR      : " . $this->formatRupiah($shippingCost) . "\n";
         $text .= "--------------------------------------\n";
         $text .= "*TOTAL TAGIHAN : " . $this->formatRupiah((float) $order->total_price) . "*\n";
         $text .= "--------------------------------------\n\n";

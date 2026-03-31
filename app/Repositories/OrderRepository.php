@@ -36,6 +36,27 @@ class OrderRepository
         return $order;
     }
 
+    public function requestPayment(Order $order, float $shippingCost, float $total)
+    {
+        $order->update([
+            'shipping_cost' => $shippingCost,
+            'total_price' => $total,
+            'payment_requested_at' => now(),
+            'payment_due_at' => now()->addDay(),
+        ]);
+
+        return $order;
+    }
+
+    public function updatePaymentProof(Order $order, string $path)
+    {
+        $order->update([
+            'payment_proof_path' => $path,
+        ]);
+
+        return $order;
+    }
+
     public function findByIdForUpdate($id)
     {
         return Order::with('orderItems.item')
@@ -89,5 +110,15 @@ class OrderRepository
     public function findById($id)
     {
         return Order::with('orderItems.item')->findOrFail($id);
+    }
+
+    public function getExpiredBookings()
+    {
+        return Order::with('orderItems.item')
+            ->where('status', Order::STATUS_BOOKING)
+            ->whereNotNull('payment_due_at')
+            ->where('payment_due_at', '<=', now())
+            ->whereNull('paid_at')
+            ->get();
     }
 }

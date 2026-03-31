@@ -19,10 +19,13 @@ class OrderResource extends JsonResource
             'invoice_number' => $this->invoice_number,
             'status' => $this->status,
             'total_price' => $this->total_price,
+            'shipping_cost' => $this->shipping_cost,
             'payment_proof_path' => $this->payment_proof_path,
             'payment_proof_url' => $this->payment_proof_path ? asset('storage/' . $this->payment_proof_path) : null,
             'tracking_number' => $this->tracking_number,
             'paid_at' => $this->paid_at,
+            'payment_requested_at' => $this->payment_requested_at,
+            'payment_due_at' => $this->payment_due_at,
             'shipped_at' => $this->shipped_at,
             'completed_at' => $this->completed_at,
             'cancelled_at' => $this->cancelled_at,
@@ -49,6 +52,7 @@ class OrderResource extends JsonResource
                         'unit_price' => $item->unit_price,
                         'qty' => $item->qty,
                         'subtotal' => $item->subtotal,
+                        'certificate_url' => $item->item?->certificate_path ? asset('storage/' . $item->item->certificate_path) : null,
                     ];
                 });
             }),

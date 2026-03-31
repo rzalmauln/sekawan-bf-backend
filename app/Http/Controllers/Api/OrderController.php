@@ -16,7 +16,7 @@ class OrderController extends Controller
     public function index(Request $request)
     {
         $validated = $request->validate([
-            'status' => 'nullable|string|in:pending,paid,packed,shipped,completed,cancelled',
+            'status' => 'nullable|string|in:booking,paid,shipped,completed,cancelled',
             'search' => 'nullable|string',
             'per_page' => 'nullable|integer|min:1|max:100',
         ]);

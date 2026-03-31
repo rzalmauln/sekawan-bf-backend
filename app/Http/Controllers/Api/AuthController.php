@@ -25,11 +25,15 @@ class AuthController extends Controller
 
         $user = $request->user();
 
-        $token = $user->createToken('admin-token')->plainTextToken;
+        $expirationMinutes = (int) config('sanctum.expiration', 480);
+        $expiresAt = now()->addMinutes($expirationMinutes);
+
+        $token = $user->createToken('admin-token', ['*'], $expiresAt)->plainTextToken;
 
         return response()->json([
             'message' => 'Login berhasil',
             'token' => $token,
+            'expires_at' => $expiresAt->toISOString(),
         ]);
     }
 

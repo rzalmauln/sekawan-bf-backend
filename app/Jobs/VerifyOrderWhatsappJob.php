@@ -41,7 +41,7 @@ class VerifyOrderWhatsappJob implements ShouldQueue
 
     private function buildMessage(Order $order): string
     {
-        $confirmationUrl = rtrim(config('app.frontend_url'), '/') . '/order/confirm/' . $order->invoice_number;
+        $confirmationUrl = rtrim(config('app.frontend_url', config('app.url')), '/') . '/order/confirm/' . $order->invoice_number;
         $informationLines = [
             'Pembayaran Anda telah berhasil kami konfirmasi.',
             'Pesanan Anda sedang kami proses untuk tahap berikutnya.',

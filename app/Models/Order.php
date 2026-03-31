@@ -9,9 +9,8 @@ class Order extends Model
 {
     use SoftDeletes;
 
-    const STATUS_PENDING = 'pending';
+    const STATUS_BOOKING = 'booking';
     const STATUS_PAID = 'paid';
-    const STATUS_PACKED = 'packed';
     const STATUS_SHIPPED = 'shipped';
     const STATUS_COMPLETED = 'completed';
     const STATUS_CANCELLED = 'cancelled';
@@ -20,10 +19,13 @@ class Order extends Model
         'invoice_number',
         'customer_id',
         'total_price',
+        'shipping_cost',
         'payment_proof_path',
         'tracking_number',
         'status',
         'paid_at',
+        'payment_requested_at',
+        'payment_due_at',
         'shipped_at',
         'completed_at',
         'cancelled_at'
@@ -31,7 +33,10 @@ class Order extends Model
 
     protected $casts = [
         'total_price' => 'decimal:2',
+        'shipping_cost' => 'decimal:2',
         'paid_at' => 'datetime',
+        'payment_requested_at' => 'datetime',
+        'payment_due_at' => 'datetime',
         'shipped_at' => 'datetime',
         'completed_at' => 'datetime',
         'cancelled_at' => 'datetime',

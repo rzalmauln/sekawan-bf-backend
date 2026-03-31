@@ -31,7 +31,6 @@ class CheckoutRequest extends FormRequest
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:items,id',
             'items.*.qty' => 'required|integer|min:1',
-            'payment_proof' => 'nullable|image|max:2048',
         ];
     }
 }

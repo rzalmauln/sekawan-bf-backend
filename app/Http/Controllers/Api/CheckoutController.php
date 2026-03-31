@@ -16,7 +16,49 @@ class CheckoutController extends Controller
     public function store(CheckoutRequest $request)
     {
         try {
-            $result = $this->checkoutService->checkout($request->validated(), $request->file('payment_proof'));
+            $result = $this->checkoutService->checkout($request->validated());
+            return response()->json($result);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    public function requestPayment(Request $request)
+    {
+        $validated = $request->validate([
+            'id' => 'required|integer|exists:orders,id',
+            'shipping_cost' => 'required|numeric|min:0',
+        ]);
+
+        try {
+            $result = $this->checkoutService->requestPayment(
+                $validated['id'],
+                (float) $validated['shipping_cost']
+            );
+
+            return response()->json($result);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    public function submitPayment(Request $request)
+    {
+        $validated = $request->validate([
+            'invoice_number' => 'required|string|exists:orders,invoice_number',
+            'payment_proof' => 'required|image|max:2048',
+        ]);
+
+        try {
+            $result = $this->checkoutService->submitPaymentProof(
+                $validated['invoice_number'],
+                $request->file('payment_proof')
+            );
+
             return response()->json($result);
         } catch (\Throwable $e) {
             return response()->json([

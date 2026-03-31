@@ -20,10 +20,11 @@ class DashboardController extends Controller
             ->pluck('total', 'status');
 
         $orderPerStatus = [
-            'pending' => $ordersByStatus['pending'] ?? 0,
+            'booking' => $ordersByStatus['booking'] ?? 0,
             'paid' => $ordersByStatus['paid'] ?? 0,
             'shipped' => $ordersByStatus['shipped'] ?? 0,
             'completed' => $ordersByStatus['completed'] ?? 0,
+            'cancelled' => $ordersByStatus['cancelled'] ?? 0,
         ];
 
         $stockPerCatalog = Catalog::select('id', 'name')
