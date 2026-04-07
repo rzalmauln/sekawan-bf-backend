@@ -130,7 +130,7 @@ class CheckoutService
             return DB::transaction(function () use ($invoiceNumber, $paymentProof, &$proofPath) {
                 $order = $this->orderRepo->findByInvoiceNumber($invoiceNumber);
 
-                if (!$order) {
+                if (! $order) {
                     throw new \Exception('Order tidak ditemukan');
                 }
 
@@ -138,7 +138,7 @@ class CheckoutService
                     throw new \Exception('Order tidak berada pada status booking');
                 }
 
-                if (!$order->payment_requested_at || !$order->payment_due_at) {
+                if (! $order->payment_requested_at || ! $order->payment_due_at) {
                     throw new \Exception('Order belum siap menerima pembayaran');
                 }
 
@@ -177,7 +177,7 @@ class CheckoutService
                 throw new \Exception('Order tidak bisa diverifikasi');
             }
 
-            if (!$order->payment_requested_at || !$order->payment_due_at) {
+            if (! $order->payment_requested_at || ! $order->payment_due_at) {
                 throw new \Exception('Order belum meminta pembayaran');
             }
 
@@ -265,7 +265,7 @@ class CheckoutService
 
                 if (
                     $order->status !== Order::STATUS_BOOKING ||
-                    !$order->payment_due_at ||
+                    ! $order->payment_due_at ||
                     $order->payment_due_at->isFuture()
                 ) {
                     return false;
@@ -297,7 +297,7 @@ class CheckoutService
         $result = DB::transaction(function () use ($invoiceNumber) {
             $order = $this->orderRepo->findByInvoiceNumber($invoiceNumber);
 
-            if (!$order) {
+            if (! $order) {
                 throw new \Exception('Order tidak ditemukan');
             }
 
@@ -319,8 +319,32 @@ class CheckoutService
         return $result;
     }
 
+    public function prunePaymentProofs(int $retentionDays): array
+    {
+        $orders = $this->orderRepo->getOrdersWithPrunablePaymentProofs($retentionDays);
+        $deletedFiles = 0;
+        $clearedOrders = 0;
+
+        foreach ($orders as $order) {
+            $paymentProofPath = $order->payment_proof_path;
+
+            if ($paymentProofPath && Storage::disk('public')->exists($paymentProofPath)) {
+                Storage::disk('public')->delete($paymentProofPath);
+                $deletedFiles++;
+            }
+
+            $this->orderRepo->clearPaymentProof($order);
+            $clearedOrders++;
+        }
+
+        return [
+            'cleared_orders' => $clearedOrders,
+            'deleted_files' => $deletedFiles,
+        ];
+    }
+
     private function generateInvoice(): string
     {
-        return 'INV-' . now()->format('YmdHis') . '-' . Str::random(5);
+        return 'INV-'.now()->format('YmdHis').'-'.Str::random(5);
     }
 }

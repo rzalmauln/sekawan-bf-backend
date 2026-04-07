@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\CheckoutRequest;
 use App\Services\CheckoutService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rules\File;
 
 class CheckoutController extends Controller
 {
@@ -17,10 +18,11 @@ class CheckoutController extends Controller
     {
         try {
             $result = $this->checkoutService->checkout($request->validated());
+
             return response()->json($result);
         } catch (\Throwable $e) {
             return response()->json([
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 400);
         }
     }
@@ -41,7 +43,7 @@ class CheckoutController extends Controller
             return response()->json($result);
         } catch (\Throwable $e) {
             return response()->json([
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 400);
         }
     }
@@ -50,7 +52,12 @@ class CheckoutController extends Controller
     {
         $validated = $request->validate([
             'invoice_number' => 'required|string|exists:orders,invoice_number',
-            'payment_proof' => 'required|image|max:2048',
+            'payment_proof' => [
+                'required',
+                File::image()
+                    ->types(['jpg', 'jpeg', 'png', 'webp'])
+                    ->max((int) config('orders.payment_proof_max_kb', 2048)),
+            ],
         ]);
 
         try {
@@ -62,64 +69,72 @@ class CheckoutController extends Controller
             return response()->json($result);
         } catch (\Throwable $e) {
             return response()->json([
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 400);
         }
     }
 
-    public function verify(Request $request){
+    public function verify(Request $request)
+    {
         $validated = $request->validate([
-            'id' => 'required|integer|exists:orders,id'
+            'id' => 'required|integer|exists:orders,id',
         ]);
         try {
             $result = $this->checkoutService->verify($validated['id']);
+
             return response()->json($result);
         } catch (\Throwable $e) {
             return response()->json([
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 400);
         }
     }
 
-    public function ship(Request $request){
+    public function ship(Request $request)
+    {
         $validated = $request->validate([
             'id' => 'required|integer|exists:orders,id',
-            'tracking_number' => 'required|string'
+            'tracking_number' => 'required|string',
         ]);
         try {
             $result = $this->checkoutService->ship($validated['id'], $validated['tracking_number']);
+
             return response()->json($result);
         } catch (\Throwable $e) {
             return response()->json([
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 400);
         }
     }
 
-    public function cancel(Request $request){
+    public function cancel(Request $request)
+    {
         $validated = $request->validate([
-            'id' => 'required|integer|exists:orders,id'
+            'id' => 'required|integer|exists:orders,id',
         ]);
         try {
             $result = $this->checkoutService->cancel($validated['id']);
+
             return response()->json($result);
         } catch (\Throwable $e) {
             return response()->json([
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 400);
         }
     }
 
-    public function complete(Request $request){
+    public function complete(Request $request)
+    {
         $validated = $request->validate([
-            'invoice_number' => 'required|string|exists:orders,invoice_number'
+            'invoice_number' => 'required|string|exists:orders,invoice_number',
         ]);
         try {
             $result = $this->checkoutService->complete($validated['invoice_number']);
+
             return response()->json($result);
         } catch (\Throwable $e) {
             return response()->json([
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 400);
         }
     }
