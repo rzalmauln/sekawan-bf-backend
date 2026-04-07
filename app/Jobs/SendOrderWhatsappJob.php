@@ -32,11 +32,9 @@ class SendOrderWhatsappJob implements ShouldQueue
 
         $message = $this->buildMessage($order);
 
-        $this->sendWa($order->customer->phone, $message, $order);
-
         $ownerPhone = env('WA_OWNER');
         if ($ownerPhone) {
-            $this->sendWa($ownerPhone, $message, $order);
+            $this->sendWa($ownerPhone, $message);
         }
     }
 
