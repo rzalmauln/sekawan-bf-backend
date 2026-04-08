@@ -44,8 +44,8 @@ class RequestPaymentWhatsappJob implements ShouldQueue
         $confirmationUrl = rtrim(config('app.frontend_url', config('app.url')), '/') . '/order/confirm/' . $order->invoice_number;
 
         $informationLines = [
-            'Pesanan Anda telah kami verifikasi dan total pembayaran sudah diperbarui dengan ongkir.',
-            'Silakan lakukan pembayaran dan upload bukti pembayaran melalui link berikut:',
+            'Pesanan anda telah di verifikasi, silahkan lakukan pembayaran melalui link dibawah ini.',
+            '(note : ANGKA YG DITTANSFER HARUS SESUAI DG INVOICE INI agar pembayaran dianggap sah oleh system)',
             '',
             $confirmationUrl,
         ];
