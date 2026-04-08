@@ -27,6 +27,7 @@ class StoreItemRequest extends FormRequest
             'price' => 'required|numeric|min:0',
             'stock' => 'nullable|integer|min:0',
             'type' => 'nullable|string|max:255',
+            'jenis_kelamin' => 'nullable|string|max:255',
             'catalog_id' => 'required|exists:catalogs,id',
             'certificate_path' => 'nullable|file|mimes:pdf,jpg,png|max:512',
             'certificate_password' => 'nullable|string|max:255',

@@ -23,6 +23,7 @@ class ItemResource extends JsonResource
             'price' => $this->price,
             'stock' => $this->stock,
             'type' => $this->type,
+            'jenis_kelamin' => $this->jenis_kelamin,
             'image_url' => $this->image_path ? asset('storage/' . $this->image_path) : null,
             'video_url' => $this->video_path ? asset('storage/' . $this->video_path) : null,
             'certificate_url' => $this->certificate_path ? asset('storage/' . $this->certificate_path) : null,

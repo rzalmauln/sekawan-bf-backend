@@ -17,6 +17,7 @@ class Item extends Model
         'price',
         'stock',
         'type',
+        'jenis_kelamin',
         'image_path',
         'video_path',
         'certificate_path',
