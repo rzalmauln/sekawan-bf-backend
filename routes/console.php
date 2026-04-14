@@ -8,5 +8,5 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('orders:cancel-expired-bookings')->everyMinute();
+// Schedule::command('orders:cancel-expired-bookings')->everyMinute();
 Schedule::command('orders:prune-payment-proofs')->dailyAt('02:30');

@@ -37,22 +37,20 @@ class OrderRepository
         return $order;
     }
 
-    public function requestPayment(Order $order, float $shippingCost, float $total)
+    public function updatePaymentProof(Order $order, string $path)
     {
         $order->update([
-            'shipping_cost' => $shippingCost,
-            'total_price' => $total,
-            'payment_requested_at' => now(),
-            'payment_due_at' => now()->addDay(),
+            'payment_proof_path' => $path,
         ]);
 
         return $order;
     }
 
-    public function updatePaymentProof(Order $order, string $path)
+    public function verifyPayment(Order $order)
     {
         $order->update([
-            'payment_proof_path' => $path,
+            'status' => Order::STATUS_PAID,
+            'paid_at' => now(),
         ]);
 
         return $order;
@@ -91,16 +89,6 @@ class OrderRepository
         return $order;
     }
 
-    public function verify(Order $order)
-    {
-        $order->update([
-            'status' => Order::STATUS_PAID,
-            'paid_at' => now(),
-        ]);
-
-        return $order;
-    }
-
     public function ship(Order $order, string $trackingNumber)
     {
         $order->update([
@@ -125,16 +113,6 @@ class OrderRepository
     public function findById($id)
     {
         return Order::with('orderItems.item')->findOrFail($id);
-    }
-
-    public function getExpiredBookings()
-    {
-        return Order::with('orderItems.item')
-            ->where('status', Order::STATUS_BOOKING)
-            ->whereNotNull('payment_due_at')
-            ->where('payment_due_at', '<=', now())
-            ->whereNull('paid_at')
-            ->get();
     }
 
     public function getOrdersWithPrunablePaymentProofs(int $retentionDays)

@@ -73,7 +73,7 @@ class DummyEcommerceSeeder extends Seeder
         }
 
         $statuses = [
-            Order::STATUS_BOOKING,
+            Order::STATUS_PENDING,
             Order::STATUS_PAID,
             Order::STATUS_SHIPPED,
             Order::STATUS_COMPLETED,
@@ -88,11 +88,8 @@ class DummyEcommerceSeeder extends Seeder
                 'invoice_number' => 'INV-' . strtoupper(Str::random(8)),
                 'customer_id' => $customer->id,
                 'total_price' => 0,
-                'shipping_cost' => null,
                 'status' => $status,
                 'payment_proof_path' => null,
-                'payment_requested_at' => null,
-                'payment_due_at' => null,
                 'paid_at' => null,
                 'shipped_at' => null,
                 'completed_at' => null,
@@ -118,13 +115,6 @@ class DummyEcommerceSeeder extends Seeder
 
                 $subtotal += $lineSubtotal;
             }
-
-            $shippingCost = in_array($status, [Order::STATUS_PAID, Order::STATUS_SHIPPED, Order::STATUS_COMPLETED], true)
-                ? rand(10000, 75000)
-                : null;
-
-            $paymentRequestedAt = $shippingCost !== null ? now()->subHours(rand(2, 48)) : null;
-            $paymentDueAt = $paymentRequestedAt ? $paymentRequestedAt->copy()->addDay() : null;
             $paidAt = in_array($status, [Order::STATUS_PAID, Order::STATUS_SHIPPED, Order::STATUS_COMPLETED], true)
                 ? now()->subDays(rand(1, 15))
                 : null;
@@ -139,13 +129,10 @@ class DummyEcommerceSeeder extends Seeder
                 : null;
 
             $order->update([
-                'shipping_cost' => $shippingCost,
                 'total_price' => $subtotal + ($shippingCost ?? 0),
                 'payment_proof_path' => in_array($status, [Order::STATUS_PAID, Order::STATUS_SHIPPED, Order::STATUS_COMPLETED], true)
                     ? 'payment_proofs/proof-' . Str::lower(Str::random(10)) . '.jpg'
                     : null,
-                'payment_requested_at' => $paymentRequestedAt,
-                'payment_due_at' => $paymentDueAt,
                 'paid_at' => $paidAt,
                 'shipped_at' => $shippedAt,
                 'completed_at' => $completedAt,

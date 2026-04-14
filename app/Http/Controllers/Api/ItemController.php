@@ -45,7 +45,7 @@ class ItemController extends Controller
 
     public function destroy(Item $item){
         $this->service->destroy($item);
-        return response()->json(['message' => 'Catalog deleted successfully']);
+        return response()->json(['message' => 'Item deleted successfully']);
     }
 
     public function verifyPasswordCertificate(Request $request){

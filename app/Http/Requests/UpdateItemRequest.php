@@ -22,6 +22,7 @@ class UpdateItemRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'code_ring' => 'nullable|string|max:255|unique:items,code_ring,' . $this->route('item')->id,
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',

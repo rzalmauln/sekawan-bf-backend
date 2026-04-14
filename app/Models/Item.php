@@ -10,6 +10,7 @@ class Item extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'code_ring',
         'catalog_id',
         'name',
         'slug',

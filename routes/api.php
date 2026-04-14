@@ -22,9 +22,8 @@ Route::middleware('auth:sanctum')->group(function () {
         'only' => [ 'store', 'update', 'destroy']
     ]);
 
-    // private api checkout
-    Route::post('checkout/request-payment', [CheckoutController::class, 'requestPayment']);
-    Route::post('checkout/verify', [CheckoutController::class, 'verify']);
+    // private api checkout (admin only)
+    Route::post('checkout/verify', [CheckoutController::class, 'verifyPayment']);
     Route::post('checkout/ship', [CheckoutController::class, 'ship']);
     Route::post('checkout/cancel', [CheckoutController::class, 'cancel']);
     Route::get('orders', [OrderController::class, 'index']);
@@ -47,7 +46,6 @@ Route::apiResource('items', ItemController::class, [
 
 // public api checkout
 Route::post('checkout', [CheckoutController::class, 'store']);
-Route::post('checkout/payment', [CheckoutController::class, 'submitPayment']);
 Route::post('checkout/complete', [CheckoutController::class, 'complete']);
 
 // public api order by invoice

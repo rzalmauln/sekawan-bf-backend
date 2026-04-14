@@ -16,6 +16,7 @@ class ItemResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'code_ring' => $this->code_ring,
             'catalog_id' => $this->catalog_id,
             'name' => $this->name,
             'slug' => $this->slug,
@@ -27,6 +28,7 @@ class ItemResource extends JsonResource
             'image_url' => $this->image_path ? asset('storage/' . $this->image_path) : null,
             'video_url' => $this->video_path ? asset('storage/' . $this->video_path) : null,
             'certificate_url' => $this->certificate_path ? asset('storage/' . $this->certificate_path) : null,
+            'certificate_password' => $this->certificate_password,
             'gaya_main' => $this->gaya_main,
             'body' => $this->body,
             'umur' => $this->umur,

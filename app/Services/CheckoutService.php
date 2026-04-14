@@ -2,9 +2,7 @@
 
 namespace App\Services;
 
-use App\Jobs\CancelOrderWhatsappJob;
 use App\Jobs\CompleteOrderWhatsappJob;
-use App\Jobs\RequestPaymentWhatsappJob;
 use App\Jobs\SendOrderWhatsappJob;
 use App\Jobs\ShipOrderWhatsappJob;
 use App\Jobs\VerifyOrderWhatsappJob;
@@ -28,18 +26,28 @@ class CheckoutService
         protected ItemRepository $itemRepo
     ) {}
 
+    /**
+     * Create order with direct checkout and payment proof upload
+     * User uploads payment proof immediately during checkout
+     */
     public function checkout(array $data)
     {
+        $proofPath = null;
+
         try {
-            $order = DB::transaction(function () use ($data) {
+            return DB::transaction(function () use ($data, &$proofPath) {
+                // Validate payment proof file is provided
+                if (!isset($data['payment_proof']) || !($data['payment_proof'] instanceof UploadedFile)) {
+                    throw new \Exception("Bukti pembayaran wajib diunggah");
+                }
+
                 $customer = $this->customerRepo->create($data['customer']);
 
                 $order = $this->orderRepo->create([
                     'invoice_number' => $this->generateInvoice(),
                     'customer_id' => $customer->id,
-                    'status' => Order::STATUS_BOOKING,
+                    'status' => Order::STATUS_PENDING,
                     'total_price' => 0,
-                    'shipping_cost' => null,
                     'payment_proof_path' => null,
                 ]);
 
@@ -70,126 +78,51 @@ class CheckoutService
 
                 $this->orderRepo->updateTotal($order, $total);
 
-                return $order;
-            });
-
-            SendOrderWhatsappJob::dispatch($order->id);
-
-            Log::info('Order created', [
-                'invoice' => $order->invoice_number,
-            ]);
-
-            return [
-                'message' => 'Booking berhasil dibuat',
-                'invoice' => $order->invoice_number,
-            ];
-        } catch (\Throwable $e) {
-            throw new \Exception('Checkout gagal', previous: $e);
-        }
-    }
-
-    public function requestPayment(int $orderId, float $shippingCost)
-    {
-        $result = DB::transaction(function () use ($orderId, $shippingCost) {
-            $order = $this->orderRepo->findByIdForUpdate($orderId);
-
-            if ($order->status !== Order::STATUS_BOOKING) {
-                throw new \Exception('Order tidak berada pada status booking');
-            }
-
-            if ($shippingCost < 0) {
-                throw new \Exception('Ongkir tidak boleh kurang dari 0');
-            }
-
-            $subtotal = (float) $order->orderItems->sum('subtotal');
-            $total = $subtotal + $shippingCost;
-
-            $this->orderRepo->requestPayment($order, $shippingCost, $total);
-
-            $freshOrder = $order->fresh();
-
-            return [
-                'message' => 'Permintaan pembayaran berhasil dikirim',
-                'invoice' => $freshOrder->invoice_number,
-                'shipping_cost' => (float) $freshOrder->shipping_cost,
-                'total_price' => (float) $freshOrder->total_price,
-                'payment_due_at' => $freshOrder->payment_due_at,
-            ];
-        });
-
-        RequestPaymentWhatsappJob::dispatch($orderId);
-
-        return $result;
-    }
-
-    public function submitPaymentProof(string $invoiceNumber, UploadedFile $paymentProof)
-    {
-        $proofPath = null;
-
-        try {
-            return DB::transaction(function () use ($invoiceNumber, $paymentProof, &$proofPath) {
-                $order = $this->orderRepo->findByInvoiceNumber($invoiceNumber);
-
-                if (! $order) {
-                    throw new \Exception('Order tidak ditemukan');
-                }
-
-                if ($order->status !== Order::STATUS_BOOKING) {
-                    throw new \Exception('Order tidak berada pada status booking');
-                }
-
-                if (! $order->payment_requested_at || ! $order->payment_due_at) {
-                    throw new \Exception('Order belum siap menerima pembayaran');
-                }
-
-                if ($order->payment_due_at->isPast()) {
-                    throw new \Exception('Batas waktu pembayaran telah berakhir');
-                }
-
-                $proofPath = $paymentProof->store('payment_proofs', 'public');
-
-                if ($order->payment_proof_path && Storage::disk('public')->exists($order->payment_proof_path)) {
-                    Storage::disk('public')->delete($order->payment_proof_path);
-                }
-
+                // Store payment proof
+                $proofPath = $data['payment_proof']->store('payment_proofs', 'public');
                 $this->orderRepo->updatePaymentProof($order, $proofPath);
-
+                
+                Log::info('Order created', [
+                    'invoice' => $order->invoice_number
+                ]);
                 return [
-                    'message' => 'Bukti pembayaran berhasil dikirim',
+                    'message' => 'Pesanan berhasil dibuat, menunggu verifikasi admin',
                     'invoice' => $order->invoice_number,
+                    'status' => $order->status,
                 ];
             });
         } catch (\Throwable $e) {
+            // Clean up uploaded file if transaction fails
             if ($proofPath && Storage::disk('public')->exists($proofPath)) {
                 Storage::disk('public')->delete($proofPath);
             }
 
-            throw new \Exception($e->getMessage(), previous: $e);
+            throw new \Exception('Checkout gagal: '.$e->getMessage(), previous: $e);
         }
     }
 
-    public function verify(int $orderId)
+    /**
+     * Admin verifies payment proof and marks order as paid
+     */
+    public function verifyPayment(int $orderId)
     {
         $result = DB::transaction(function () use ($orderId) {
             $order = $this->orderRepo->findByIdForUpdate($orderId);
 
-            if ($order->status !== Order::STATUS_BOOKING) {
-                throw new \Exception('Order tidak bisa diverifikasi');
-            }
-
-            if (! $order->payment_requested_at || ! $order->payment_due_at) {
-                throw new \Exception('Order belum meminta pembayaran');
+            if ($order->status !== Order::STATUS_PENDING) {
+                throw new \Exception('Order harus dalam status pending untuk diverifikasi');
             }
 
             if (empty($order->payment_proof_path)) {
-                throw new \Exception('Bukti pembayaran belum diunggah');
+                throw new \Exception('Bukti pembayaran tidak ditemukan');
             }
 
-            $this->orderRepo->verify($order);
+            $this->orderRepo->verifyPayment($order);
 
             return [
-                'message' => 'Order berhasil diverifikasi',
+                'message' => 'Pembayaran berhasil diverifikasi',
                 'invoice' => $order->invoice_number,
+                'status' => $order->status,
             ];
         });
 
@@ -198,13 +131,16 @@ class CheckoutService
         return $result;
     }
 
+    /**
+     * Admin ships order with tracking number
+     */
     public function ship(int $orderId, string $trackingNumber)
     {
         $result = DB::transaction(function () use ($orderId, $trackingNumber) {
             $order = $this->orderRepo->findByIdForUpdate($orderId);
 
             if ($order->status !== Order::STATUS_PAID) {
-                throw new \Exception('Order belum bisa dikirim');
+                throw new \Exception('Order harus sudah dibayar sebelum dapat dikirim');
             }
 
             if (empty($trackingNumber)) {
@@ -217,6 +153,7 @@ class CheckoutService
                 'message' => 'Order berhasil dikirim',
                 'invoice' => $order->invoice_number,
                 'tracking_number' => $trackingNumber,
+                'status' => $order->status,
             ];
         });
 
@@ -225,15 +162,50 @@ class CheckoutService
         return $result;
     }
 
-    public function cancel(int $id)
+    public function verify(int $orderId)
     {
-        $result = DB::transaction(function () use ($id) {
-            $order = $this->orderRepo->findByIdForUpdate($id);
+        $result = DB::transaction(function () use ($orderId) {
+            $order = $this->orderRepo->findByIdForUpdate($orderId);
 
-            if ($order->status !== Order::STATUS_BOOKING) {
-                throw new \Exception('Order tidak bisa dibatalkan');
+            if ($order->status !== Order::STATUS_PENDING) {
+                throw new \Exception('Order tidak bisa diverifikasi');
             }
 
+            if (! $order->payment_requested_at || ! $order->payment_due_at) {
+                throw new \Exception('Order belum meminta pembayaran');
+            }
+
+            if (empty($order->payment_proof_path)) {
+                throw new \Exception('Bukti pembayaran belum diunggah');
+            }
+
+            $this->orderRepo->verifyPayment($order);
+
+            return [
+                'message' => 'Order berhasil diverifikasi',
+                'invoice' => $order->invoice_number,
+            ];
+        });
+
+        VerifyOrderWhatsappJob::dispatch($orderId);
+
+        return $result;
+    }
+
+    /**
+     * Admin cancels order and return stock
+     */
+    public function cancel(int $orderId)
+    {
+        $result = DB::transaction(function () use ($orderId) {
+            $order = $this->orderRepo->findByIdForUpdate($orderId);
+
+            // Can only cancel pending or paid orders
+            if (!in_array($order->status, [Order::STATUS_PENDING, Order::STATUS_PAID])) {
+                throw new \Exception('Order tidak bisa dibatalkan pada status saat ini');
+            }
+
+            // Return stock
             foreach ($order->orderItems as $orderItem) {
                 $this->itemRepo->incrementStock(
                     $orderItem->item,
@@ -243,55 +215,23 @@ class CheckoutService
 
             $this->orderRepo->cancel($order);
 
+            // Delete payment proof if exists
+            if ($order->payment_proof_path && Storage::disk('public')->exists($order->payment_proof_path)) {
+                Storage::disk('public')->delete($order->payment_proof_path);
+            }
+
             return [
                 'message' => 'Order berhasil dibatalkan',
                 'invoice' => $order->invoice_number,
             ];
         });
 
-        CancelOrderWhatsappJob::dispatch($id);
-
         return $result;
     }
 
-    public function cancelExpiredBookings(): int
-    {
-        $expiredOrders = $this->orderRepo->getExpiredBookings();
-        $cancelledCount = 0;
-
-        foreach ($expiredOrders as $expiredOrder) {
-            $wasCancelled = DB::transaction(function () use ($expiredOrder) {
-                $order = $this->orderRepo->findByIdForUpdate($expiredOrder->id);
-
-                if (
-                    $order->status !== Order::STATUS_BOOKING ||
-                    ! $order->payment_due_at ||
-                    $order->payment_due_at->isFuture()
-                ) {
-                    return false;
-                }
-
-                foreach ($order->orderItems as $orderItem) {
-                    $this->itemRepo->incrementStock(
-                        $orderItem->item,
-                        $orderItem->qty
-                    );
-                }
-
-                $this->orderRepo->cancel($order);
-
-                return true;
-            });
-
-            if ($wasCancelled) {
-                CancelOrderWhatsappJob::dispatch($expiredOrder->id);
-                $cancelledCount++;
-            }
-        }
-
-        return $cancelledCount;
-    }
-
+    /**
+     * User completes order when item is received
+     */
     public function complete(string $invoiceNumber)
     {
         $result = DB::transaction(function () use ($invoiceNumber) {

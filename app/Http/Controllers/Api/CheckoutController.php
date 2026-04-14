@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\CheckoutRequest;
 use App\Services\CheckoutService;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rules\File;
+use Illuminate\Support\Facades\Log;
 
 class CheckoutController extends Controller
 {
@@ -17,9 +17,10 @@ class CheckoutController extends Controller
     public function store(CheckoutRequest $request)
     {
         try {
+            Log::info('Order created', $request->validated());
             $result = $this->checkoutService->checkout($request->validated());
 
-            return response()->json($result);
+            return response()->json($result, 201);
         } catch (\Throwable $e) {
             return response()->json([
                 'message' => $e->getMessage(),
@@ -27,60 +28,14 @@ class CheckoutController extends Controller
         }
     }
 
-    public function requestPayment(Request $request)
-    {
-        $validated = $request->validate([
-            'id' => 'required|integer|exists:orders,id',
-            'shipping_cost' => 'required|numeric|min:0',
-        ]);
-
-        try {
-            $result = $this->checkoutService->requestPayment(
-                $validated['id'],
-                (float) $validated['shipping_cost']
-            );
-
-            return response()->json($result);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'message' => $e->getMessage(),
-            ], 400);
-        }
-    }
-
-    public function submitPayment(Request $request)
-    {
-        $validated = $request->validate([
-            'invoice_number' => 'required|string|exists:orders,invoice_number',
-            'payment_proof' => [
-                'required',
-                File::image()
-                    ->types(['jpg', 'jpeg', 'png', 'webp'])
-                    ->max((int) config('orders.payment_proof_max_kb', 2048)),
-            ],
-        ]);
-
-        try {
-            $result = $this->checkoutService->submitPaymentProof(
-                $validated['invoice_number'],
-                $request->file('payment_proof')
-            );
-
-            return response()->json($result);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'message' => $e->getMessage(),
-            ], 400);
-        }
-    }
-
-    public function verify(Request $request)
+    public function verifyPayment(Request $request)
     {
         $validated = $request->validate([
             'id' => 'required|integer|exists:orders,id',
         ]);
+
         try {
-            $result = $this->checkoutService->verify($validated['id']);
+            $result = $this->checkoutService->verifyPayment($validated['id']);
 
             return response()->json($result);
         } catch (\Throwable $e) {

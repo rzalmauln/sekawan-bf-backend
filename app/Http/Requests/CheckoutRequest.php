@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\File;
 
 class CheckoutRequest extends FormRequest
 {
@@ -31,6 +32,13 @@ class CheckoutRequest extends FormRequest
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:items,id',
             'items.*.qty' => 'required|integer|min:1',
+            'payment_proof' => [
+                'required',
+                File::image()
+                    ->types(['jpg', 'jpeg', 'png', 'webp'])
+                    ->max((int) config('orders.payment_proof_max_kb', 2048)),
+            ],
         ];
     }
 }
+
